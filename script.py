@@ -49,7 +49,7 @@ def g2g_cost_calculator(km, service_type):
 
 # Streamlit UI
 def main():
-    st.title("MSIL Nearest Workshop Finder")
+    st.title("MSIL Nearest Workshop")
     
     if df.empty:
         st.warning("No data available. Please check the uploaded file.")
@@ -74,30 +74,22 @@ def main():
     channels = df["channel"].dropna().unique().tolist()
     channel = st.selectbox("Select Channel:", ["All"] + channels)
     
-    body_shops = df["body shop"].dropna().unique().tolist()
-    body_shop = st.selectbox("Select Body Shop:", ["All"] + sorted(body_shops))
+    body_shop = st.selectbox("Body Shop:", ["All"] + sorted(df["body shop"].dropna().unique()))
     
     states = df["state"].dropna().unique().tolist()
     state = st.selectbox("Select State:", ["All"] + states)
     
-    # Apply filters before finding nearest workshops
+    # Filter data based on inputs
     if user_lat and user_long:
-        temp_df = df.copy()
-
-        # Apply filters first
+        filtered_df = get_nearest_workshops(user_lat, user_long, df)
         if channel != "All":
-            temp_df = temp_df[temp_df["channel"] == channel]
-        
+            filtered_df = filtered_df[filtered_df["channel"] == channel]
         if body_shop != "All":
-            temp_df = temp_df[temp_df["body shop"] == body_shop]
-        
+            filtered_df = filtered_df[filtered_df["body shop"] == body_shop]
         if state != "All":
-            temp_df = temp_df[temp_df["state"] == state]
-
-        # Get nearest workshops after filtering
-        filtered_df = get_nearest_workshops(user_lat, user_long, temp_df)
-
-        # Display results
+            filtered_df = filtered_df[filtered_df["state"] == state]
+        
+        # Display filtered data
         if not filtered_df.empty:
             st.write("### Nearest Workshops")
             st.dataframe(filtered_df)
