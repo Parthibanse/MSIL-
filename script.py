@@ -47,30 +47,9 @@ def g2g_cost_calculator(km, service_type):
     
     return total_cost
 
-# Customer Charge Calculator
-def customer_charge_calculator(km, vehicle_type):
-    base_rates = {"UWL": (2180, 2572, 36), "FBT": (2600, 3068, 46)}
-    
-    if vehicle_type not in base_rates:
-        return "Invalid Vehicle Type"
-    
-    base_without_gst, base_with_gst, per_km_rate = base_rates[vehicle_type]
-    
-    if km <= 25:
-        return base_without_gst, base_with_gst
-    else:
-        extra_km = km - 25
-        extra_cost_without_gst = extra_km * per_km_rate
-        extra_cost_with_gst = extra_cost_without_gst * 1.18
-        
-        total_without_gst = base_without_gst + extra_cost_without_gst
-        total_with_gst = base_with_gst + extra_cost_with_gst
-        
-        return total_without_gst, total_with_gst
-
 # Streamlit UI
 def main():
-    st.title("MSIL Nearest Workshop")
+    st.title("MSIL Nearest Workshop Finder")
     
     if df.empty:
         st.warning("No data available. Please check the uploaded file.")
@@ -87,15 +66,6 @@ def main():
         g2g_cost = g2g_cost_calculator(km_input, service_type)
         st.sidebar.success(f"Total Cost: ₹{g2g_cost:.2f}")
     
-    # Customer Charge Calculator
-    st.sidebar.subheader("💰 Customer Charge Calculator")
-    vehicle_type = st.sidebar.selectbox("Select Vehicle Type:", ["UWL", "FBT"])
-    km_charge = st.sidebar.number_input("Enter Distance (KM):", min_value=0, step=1)
-    if st.sidebar.button("Calculate Charges"):
-        charge_without_gst, charge_with_gst = customer_charge_calculator(km_charge, vehicle_type)
-        st.sidebar.success(f"Amount Without GST: ₹{charge_without_gst:.2f}")
-        st.sidebar.success(f"Amount With GST: ₹{charge_with_gst:.2f}")
-    
     # Search by Latitude & Longitude
     user_lat = st.number_input("Enter Latitude:", format="%0.6f")
     user_long = st.number_input("Enter Longitude:", format="%0.6f")
@@ -104,22 +74,30 @@ def main():
     channels = df["channel"].dropna().unique().tolist()
     channel = st.selectbox("Select Channel:", ["All"] + channels)
     
-    body_shop = st.selectbox("Body Shop:", ["All"] + sorted(df["body shop"].dropna().unique()))
+    body_shops = df["body shop"].dropna().unique().tolist()
+    body_shop = st.selectbox("Select Body Shop:", ["All"] + sorted(body_shops))
     
     states = df["state"].dropna().unique().tolist()
     state = st.selectbox("Select State:", ["All"] + states)
     
-    # Filter data based on inputs
+    # Apply filters before finding nearest workshops
     if user_lat and user_long:
-        filtered_df = get_nearest_workshops(user_lat, user_long, df)
+        temp_df = df.copy()
+
+        # Apply filters first
         if channel != "All":
-            filtered_df = filtered_df[filtered_df["channel"] == channel]
-        if body_shop != "All":
-            filtered_df = filtered_df[filtered_df["body shop"] == body_shop]
-        if state != "All":
-            filtered_df = filtered_df[filtered_df["state"] == state]
+            temp_df = temp_df[temp_df["channel"] == channel]
         
-        # Display filtered data
+        if body_shop != "All":
+            temp_df = temp_df[temp_df["body shop"] == body_shop]
+        
+        if state != "All":
+            temp_df = temp_df[temp_df["state"] == state]
+
+        # Get nearest workshops after filtering
+        filtered_df = get_nearest_workshops(user_lat, user_long, temp_df)
+
+        # Display results
         if not filtered_df.empty:
             st.write("### Nearest Workshops")
             st.dataframe(filtered_df)
